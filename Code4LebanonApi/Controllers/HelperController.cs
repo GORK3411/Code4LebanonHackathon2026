@@ -52,5 +52,79 @@ namespace Code4LebanonApi.Controllers
             var result = await _repo.GetResponsesForSurveyAsync(surveyId);
             return Ok(result);
         }
+
+        // A-1 Registrations by Channel
+        // GET api/helper/registrations-by-channel
+        [HttpGet("registrations-by-channel")]
+        public async Task<IActionResult> GetRegistrationsByChannel()
+        {
+            var result = await _repo.GetRegistrationsByChannelAsync();
+            return Ok(result);
+        }
+
+        // A-3 Growth metrics
+        // GET api/helper/registrations-growth?from=yyyy-MM-dd&to=yyyy-MM-dd
+        [HttpGet("registrations-growth")]
+        public async Task<IActionResult> GetRegistrationsGrowth([FromQuery] string from = null, [FromQuery] string to = null)
+        {
+            DateTime tTo = string.IsNullOrEmpty(to) ? DateTime.UtcNow : DateTime.Parse(to);
+            DateTime tFrom = string.IsNullOrEmpty(from) ? tTo.AddDays(-30) : DateTime.Parse(from);
+            var result = await _repo.GetRegistrationsGrowthAsync(tFrom, tTo);
+            return Ok(result);
+        }
+
+        // A-2 Deep-dive by entity (filter utm_source contains)
+        // GET api/helper/deep-dive?contains=university&top=20
+        [HttpGet("deep-dive")]
+        public async Task<IActionResult> GetDeepDive([FromQuery] string contains = "", [FromQuery] int top = 20)
+        {
+            var result = await _repo.GetDeepDiveByEntityAsync(contains, top);
+            return Ok(result);
+        }
+
+        // B-1 Areas of Interest
+        // GET api/helper/areas-of-interest
+        [HttpGet("areas-of-interest")]
+        public async Task<IActionResult> GetAreasOfInterest()
+        {
+            var result = await _repo.GetAreasOfInterestAsync();
+            return Ok(result);
+        }
+
+        // B-2 Motivations
+        // GET api/helper/motivations
+        [HttpGet("motivations")]
+        public async Task<IActionResult> GetMotivations()
+        {
+            var result = await _repo.GetMotivationsAsync();
+            return Ok(result);
+        }
+
+        // B-3 Challenges
+        // GET api/helper/challenges
+        [HttpGet("challenges")]
+        public async Task<IActionResult> GetChallenges()
+        {
+            var result = await _repo.GetChallengesAsync();
+            return Ok(result);
+        }
+
+        // C-1 Channel effectiveness by region
+        // GET api/helper/channel-effectiveness
+        [HttpGet("channel-effectiveness")]
+        public async Task<IActionResult> GetChannelEffectiveness()
+        {
+            var result = await _repo.GetChannelEffectivenessByRegionAsync();
+            return Ok(result);
+        }
+
+        // C-2 Region distribution / gap analysis
+        // GET api/helper/region-distribution
+        [HttpGet("region-distribution")]
+        public async Task<IActionResult> GetRegionDistribution()
+        {
+            var result = await _repo.GetRegionDistributionAsync();
+            return Ok(result);
+        }
     }
 }
