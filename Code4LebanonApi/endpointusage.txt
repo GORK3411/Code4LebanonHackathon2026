@@ -1,0 +1,22 @@
+API endpoint usage and section mapping
+
+Controller: HelperController (route: /api/helper)
+- GET /api/helper/applicants-per-region : Returns applicants per region (general helpers)
+- GET /api/helper/published-surveys : Published surveys list (helper)
+- GET /api/helper/active-published-surveys : Active published surveys (helper)
+- GET /api/helper/responses/{surveyId} : Responses for a given survey (helper)
+- GET /api/helper/registrations-by-channel : A-1 Registrations by channel (Section A)
+- GET /api/helper/registrations-growth?from=yyyy-MM-dd&to=yyyy-MM-dd : A-3 Growth metrics (Section A)
+- GET /api/helper/deep-dive?contains=university&top=20 : A-2 Deep-dive by entity (Section A)
+- GET /api/helper/areas-of-interest : B-1 Areas of interest (Section B)
+- GET /api/helper/motivations : B-2 Motivations (Section B)
+- GET /api/helper/challenges : B-3 Challenges (Section B)
+- GET /api/helper/channel-effectiveness : C-1 Channel effectiveness by region (Section C)
+- GET /api/helper/region-distribution : C-2 Region distribution / gap analysis (Section C)
+
+Controller: AController (route: /A)
+- GET /A : Exposes last-response information from NumuSurveyService (used for quick checks)
+
+Notes:
+- "Section A/B/C" refer to analytical groupings as annotated in the controller comments.
+- Paths are relative to the application base URL (e.g., https://host/).

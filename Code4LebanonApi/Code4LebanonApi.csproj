@@ -8,6 +8,13 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
+  </ItemGroup>
+
+  <!-- Exclude tools/test runner source files from the main web project to avoid multiple Program entry points -->
+  <ItemGroup>
+    <Compile Remove="Tools\**\*.cs" />
   </ItemGroup>
 
 </Project>
