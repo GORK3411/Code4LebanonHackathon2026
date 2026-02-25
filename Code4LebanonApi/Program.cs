@@ -1,7 +1,6 @@
 
 using Code4LebanonApi.Services;
 using Microsoft.EntityFrameworkCore;
-
 namespace Code4LebanonApi
 {
     public class Program
@@ -18,6 +17,8 @@ namespace Code4LebanonApi
 
             builder.Services.AddHttpClient();
             builder.Services.AddHttpClient<NumuSurveyService>();
+            // Background data refresher that pulls data from the source API every 15 minutes
+            builder.Services.AddHostedService<Code4LebanonApi.Services.DataRefreshService>();
 
             // Register EF Core DbContext for Code4Lebanon database.
             var useInMemory = builder.Configuration.GetValue<bool>("UseInMemoryDatabase");

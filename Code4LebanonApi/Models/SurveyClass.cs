@@ -6,21 +6,21 @@ using System.ComponentModel.DataAnnotations.Schema;
 public class Survey
 {
     [JsonPropertyName("id")]
-    public string Id { get; set; }
+    public string? Id { get; set; }
 
     [JsonPropertyName("slug")]
-    public string Slug { get; set; }
+    public string? Slug { get; set; }
 
     [JsonPropertyName("title")]
-    public string Title { get; set; }
+    public string? Title { get; set; }
 
     [JsonPropertyName("description")]
-    public string Description { get; set; }
+    public string? Description { get; set; }
 
     // We keep schema only as a container to reach sections
     [JsonPropertyName("schema")]
     [NotMapped]
-    public SurveySchema Schema { get; set; }
+    public SurveySchema? Schema { get; set; }
 
     [JsonPropertyName("is_active")]
     public bool IsActive { get; set; }
@@ -48,14 +48,14 @@ public class SurveySchema
 {
     // ONLY sections extracted
     [JsonPropertyName("sections")]
-    public List<SurveySection> Sections { get; set; }
+    public List<SurveySection>? Sections { get; set; }
 }
 
 public class SurveySection
 {
     [JsonPropertyName("id")]
-    public string Id { get; set; }
+    public string? Id { get; set; }
 
     [JsonPropertyName("title")]
-    public string Title { get; set; }
+    public string? Title { get; set; }
 }

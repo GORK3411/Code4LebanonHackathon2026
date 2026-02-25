@@ -194,7 +194,7 @@ namespace Code4LebanonApi.Services
         }
 
         // Backwards-compatible helper used by existing controllers
-        public async Task<string> GetDataAsync()
+        public async Task<List<Survey>> GetDataAsync()
         {
             // Default to fetching first page of surveys
             return await GetAllSurveysAsync();
