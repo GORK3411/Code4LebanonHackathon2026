@@ -82,5 +82,12 @@ namespace Code4LebanonApi.Services
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();
         }
+
+        // Backwards-compatible helper used by existing controllers
+        public async Task<string> GetDataAsync()
+        {
+            // Default to fetching first page of surveys
+            return await GetAllSurveysAsync();
+        }
     }
 }

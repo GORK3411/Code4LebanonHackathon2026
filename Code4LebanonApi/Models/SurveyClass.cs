@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations.Schema;
 
 public class Survey
 {
@@ -18,6 +19,7 @@ public class Survey
 
     // We keep schema only as a container to reach sections
     [JsonPropertyName("schema")]
+    [NotMapped]
     public SurveySchema Schema { get; set; }
 
     [JsonPropertyName("is_active")]
