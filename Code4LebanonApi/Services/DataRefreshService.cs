@@ -6,6 +6,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
+using Code4LebanonApi.Models;
+
+// NOTE: This implementation adds lightweight retry/backoff (Polly-like) logic
+// and persistent checkpointing via the SyncStatus table. It fetches pages
+// from `NumuSurveyService` and commits each page before fetching the next one
+// which keeps memory bounded and makes the refresh resumable.
 
 namespace Code4LebanonApi.Services
 {
@@ -16,6 +22,9 @@ namespace Code4LebanonApi.Services
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly NumuSurveyService _numu;
         private readonly TimeSpan _interval = TimeSpan.FromMinutes(15);
+        private readonly int _pageLimit = 200;
+        private readonly int _maxRetries = 3;
+        private readonly TimeSpan _initialBackoff = TimeSpan.FromSeconds(2);
 
         public DataRefreshService(ILogger<DataRefreshService> logger, IServiceScopeFactory scopeFactory, NumuSurveyService numu)
         {
@@ -44,27 +53,45 @@ namespace Code4LebanonApi.Services
 
             _logger.LogInformation("DataRefreshService stopped.");
         }
-
         private async Task RefreshOnce(CancellationToken ct)
         {
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<Code4LebanonContext>();
 
-            // Determine last saved response date to fetch only new entries
-            var last = context.SurveyResponses.OrderByDescending(r => r.CreatedAt).Select(r => r.CreatedAt).FirstOrDefault();
-            var start = last == default ? DateTime.UtcNow.AddDays(-30) : last.AddSeconds(1);
+
+            // Load or create checkpoint
+            var syncName = "NumuResponses";
+            var status = context.SyncStatuses.FirstOrDefault(s => s.ServiceName == syncName);
+            if (status == null)
+            {
+                status = new SyncStatus { ServiceName = syncName };
+                context.SyncStatuses.Add(status);
+                await context.SaveChangesAsync(ct);
+            }
+
+            var start = status.LastProcessedAt.HasValue ? status.LastProcessedAt.Value.AddSeconds(1) : DateTime.UtcNow.AddDays(-30);
             var end = DateTime.UtcNow;
 
-            _logger.LogInformation("Refreshing responses from {start} to {end}", start, end);
+            _logger.LogInformation("Refreshing responses from {start} to {end} (checkpoint {checkpoint})", start, end, status.LastProcessedAt);
 
             int page = 1;
-            const int pageLimit = 100;
             bool more = true;
             int imported = 0;
 
             while (more && !ct.IsCancellationRequested)
             {
-                var responses = await _numu.GetResponsesAsync(start, end, page: page, limit: pageLimit);
+                // Fetch a single page with retry/backoff
+                List<SurveyResponse> responses = null;
+                try
+                {
+                    responses = await ExecuteWithRetryAsync(() => _numu.GetResponsesAsync(start, end, page: page, limit: _pageLimit), _maxRetries, _initialBackoff, ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to fetch page {page} after retries; aborting this run", page);
+                    break;
+                }
+
                 if (responses == null || responses.Count == 0)
                 {
                     more = false;
@@ -76,6 +103,7 @@ namespace Code4LebanonApi.Services
                     try
                     {
                         var existing = await context.SurveyResponses.FindAsync(new object[] { r.Id }, ct);
+
                         // Extract parsed fields from r.Responses (dictionary) defensively
                         string areas = null;
                         string motivation = null;
@@ -92,7 +120,6 @@ namespace Code4LebanonApi.Services
 
                         if (existing == null)
                         {
-                            // New record
                             var newEntity = new SurveyResponse
                             {
                                 Id = r.Id,
@@ -116,7 +143,6 @@ namespace Code4LebanonApi.Services
                         }
                         else
                         {
-                            // Update some fields
                             existing.UtmSource = r.UtmSource;
                             existing.GeoCountry = r.GeoCountry;
                             existing.GeoRegion = r.GeoRegion;
@@ -135,31 +161,48 @@ namespace Code4LebanonApi.Services
                     }
                 }
 
+                // Commit each page to keep memory bounded and to make progress durable
+                await context.SaveChangesAsync(ct);
+
+                // Update checkpoint after successful commit
+                var maxCreated = responses.Max(x => x.CreatedAt);
+                var lastId = responses.Last().Id;
+                status.LastProcessedAt = maxCreated > (status.LastProcessedAt ?? DateTime.MinValue) ? maxCreated : status.LastProcessedAt;
+                status.LastProcessedId = lastId;
+                status.LastRunAt = DateTime.UtcNow;
+                context.SyncStatuses.Update(status);
                 await context.SaveChangesAsync(ct);
 
                 // If we received less than pageLimit, no more pages
-                if (responses.Count < pageLimit) more = false;
+                if (responses.Count < _pageLimit) more = false;
                 else page++;
             }
 
-            // Cleanup: remove responses older than 2 years to avoid db growth (adjustable)
-            try
+            _logger.LogInformation("Data refresh complete. Imported: {imported}. LastProcessedAt={last}", imported, status.LastProcessedAt);
+        }
+
+        // Lightweight retry with exponential backoff + jitter (Polly-like)
+        private static async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> action, int maxRetries, TimeSpan initialDelay, CancellationToken ct)
+        {
+            var delay = initialDelay;
+            var rand = new Random();
+
+            for (int attempt = 1; ; attempt++)
             {
-                var cutoff = DateTime.UtcNow.AddYears(-2);
-                var old = context.SurveyResponses.Where(r => r.CreatedAt < cutoff).ToList();
-                if (old.Count > 0)
+                ct.ThrowIfCancellationRequested();
+                try
                 {
-                    context.SurveyResponses.RemoveRange(old);
-                    await context.SaveChangesAsync(ct);
-                    _logger.LogInformation("Removed {count} old responses older than {cutoff}", old.Count, cutoff);
+                    return await action();
+                }
+                catch (Exception) when (attempt <= maxRetries)
+                {
+                    // jittered backoff
+                    var jitterMs = rand.Next(0, 300);
+                    await Task.Delay(delay + TimeSpan.FromMilliseconds(jitterMs), ct);
+                    delay = TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds * 2, 30000));
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to purge old records");
-            }
-
-            _logger.LogInformation("Data refresh complete. Imported: {imported}", imported);
         }
-    }
+}
+
 }

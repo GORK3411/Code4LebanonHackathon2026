@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Code4LebanonApi.Models;
 
 namespace Code4LebanonApi.Services
 {
@@ -10,5 +11,6 @@ namespace Code4LebanonApi.Services
 
         public DbSet<Survey> Surveys { get; set; }
         public DbSet<SurveyResponse> SurveyResponses { get; set; }
+        public DbSet<SyncStatus> SyncStatuses { get; set; }
     }
 }
