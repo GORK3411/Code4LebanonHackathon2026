@@ -1,4 +1,6 @@
 
+using Code4LebanonApi.Services;
+
 namespace Code4LebanonApi
 {
     public class Program
@@ -13,6 +15,8 @@ namespace Code4LebanonApi
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
 
+            builder.Services.AddHttpClient();
+            builder.Services.AddHttpClient<NumuSurveyService>();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
