@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations.Schema;
 
 public class SurveyResponse
 {
@@ -20,6 +21,7 @@ public class SurveyResponse
     public string RespondentName { get; set; }
 
     [JsonPropertyName("responses")]
+    [NotMapped]
     public Dictionary<string, object> Responses { get; set; }
 
     [JsonPropertyName("utm_source")]
