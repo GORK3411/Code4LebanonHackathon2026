@@ -1,0 +1,6 @@
+@Code4LebanonApi_HostAddress = http://localhost:5261
+
+GET {{Code4LebanonApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
