@@ -1,5 +1,6 @@
 using Code4LebanonApi.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 
 namespace Code4LebanonApi.Controllers
 {
@@ -17,7 +18,9 @@ namespace Code4LebanonApi.Controllers
         [HttpGet]
         public async Task<IActionResult> Get()
         {
-            var data = await _service.GetDataAsync();
+            DateTime startDate = DateTime.ParseExact("2026-02-01", "yyyy-MM-dd", CultureInfo.InvariantCulture);
+            DateTime endDate = DateTime.ParseExact("2026-02-28", "yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var data = await _service.GetLastResponseDateAsync();
             return Ok(data);
         }
     }
